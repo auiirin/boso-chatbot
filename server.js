@@ -8,15 +8,7 @@ const app = express()
 
 // CORS — รองรับทั้งสองเว็บ
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true)
-    cb(new Error('Not allowed by CORS'))
-  },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
-}))
-
+app.use(cors())
 app.use(express.json())
 
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
