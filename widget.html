@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOSO — Soraso Hotel AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sarabun:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d1d1d6;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-700: #3f3f46;
+  --gray-900: #18181b;
+  --accent: #18181b;
+  --accent-light: #f4f4f5;
+  --green: #22c55e;
+  --radius: 20px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 20px 60px -12px rgba(0,0,0,0.15), 0 8px 24px -8px rgba(0,0,0,0.08);
+}
+
+body { font-family: 'Sarabun', 'Inter', sans-serif; background: #f0f0f0; min-height: 100vh; }
+
+/* ===== TOGGLE BUTTON ===== */
+#boso-toggle {
+  position: fixed; bottom: 28px; right: 28px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--accent); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-lg);
+  transition: transform .2s ease, box-shadow .2s ease;
+  z-index: 9999;
+}
+#boso-toggle:hover { transform: scale(1.06); }
+#boso-toggle.open { background: var(--gray-100); }
+#boso-toggle .t-icon { transition: transform .2s ease; }
+
+/* Unread badge */
+.unread-badge {
+  position: absolute; top: -2px; right: -2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #ef4444; border: 2px solid white;
+  display: none;
+}
+.unread-badge.show { display: block; }
+
+/* ===== CHAT WINDOW ===== */
+#boso-window {
+  position: fixed; bottom: 96px; right: 28px;
+  width: 375px; height: 560px;
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; overflow: hidden;
+  z-index: 9998;
+  transform: translateY(16px) scale(0.97);
+  opacity: 0; pointer-events: none;
+  transition: transform .25s cubic-bezier(.32,1.2,.64,1), opacity .2s ease;
+}
+#boso-window.open {
+  transform: translateY(0) scale(1);
+  opacity: 1; pointer-events: all;
+}
+
+/* ===== HEADER ===== */
+.boso-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--gray-100);
+  display: flex; align-items: center; gap: 12px;
+  background: var(--white); flex-shrink: 0;
+}
+
+.boso-avatar-wrap { position: relative; flex-shrink: 0; }
+
+.boso-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--gray-900);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 600; color: white;
+  letter-spacing: .02em;
+}
+
+.online-dot {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--green); border: 2px solid white;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+.boso-info { flex: 1; }
+.boso-name { font-size: 14px; font-weight: 600; color: var(--gray-900); letter-spacing: -.01em; }
+.boso-sub { font-size: 11.5px; color: var(--gray-400); margin-top: 1px; }
+
+.boso-close {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: none; border: none; cursor: pointer;
+  color: var(--gray-400); font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.boso-close:hover { background: var(--gray-100); color: var(--gray-700); }
+
+/* ===== MESSAGES ===== */
+#boso-messages {
+  flex: 1; overflow-y: auto; padding: 16px 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--gray-50); min-height: 0;
+}
+#boso-messages::-webkit-scrollbar { width: 3px; }
+#boso-messages::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 3px; }
+
+/* Time divider */
+.time-divider {
+  text-align: center; font-size: 11px;
+  color: var(--gray-400); font-family: 'Inter', sans-serif;
+  letter-spacing: .04em;
+}
+
+/* Bot row */
+.boso-bot-row { display: flex; align-items: flex-end; gap: 7px; align-self: flex-start; max-width: 90%; animation: msgIn .18s ease; }
+.boso-user-row { align-self: flex-end; max-width: 78%; animation: msgIn .18s ease; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.boso-mini-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--gray-900); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', sans-serif; font-size: 9px;
+  font-weight: 700; color: white; letter-spacing: .02em;
+}
+
+/* Bubbles */
+.boso-bubble-bot {
+  background: var(--white); color: var(--gray-900);
+  border: 1px solid var(--gray-200);
+  border-radius: 4px 14px 14px 14px;
+  padding: 10px 13px; font-size: 13.5px; line-height: 1.6;
+  box-shadow: var(--shadow);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+.boso-bubble-user {
+  background: var(--gray-900); color: white;
+  border-radius: 14px 4px 14px 14px;
+  padding: 10px 13px; font-size: 13.5px; line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Typing */
+.boso-typing-row { display: flex; align-items: flex-end; gap: 7px; }
+.boso-typing-bubble {
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: 4px 14px 14px 14px; padding: 12px 15px;
+  display: flex; gap: 4px; align-items: center;
+  box-shadow: var(--shadow);
+}
+.boso-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gray-400); animation: typing .9s ease infinite;
+}
+.boso-dot:nth-child(2) { animation-delay: .15s; }
+.boso-dot:nth-child(3) { animation-delay: .3s; }
+@keyframes typing { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-4px);opacity:1} }
+
+/* Quick replies */
+.boso-qr { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 0 0 33px; }
+.boso-qr-btn {
+  background: var(--white); border: 1px solid var(--gray-200);
+  color: var(--gray-700); font-family: 'Sarabun', sans-serif;
+  font-size: 12px; padding: 5px 12px; border-radius: 20px;
+  cursor: pointer; white-space: nowrap;
+  transition: all .15s ease;
+}
+.boso-qr-btn:hover {
+  background: var(--gray-900); border-color: var(--gray-900);
+  color: white; transform: translateY(-1px);
+}
+
+/* ===== FOOTER ===== */
+.boso-footer {
+  padding: 12px 14px 14px; background: var(--white);
+  border-top: 1px solid var(--gray-100); flex-shrink: 0;
+}
+
+.boso-input-wrap {
+  display: flex; align-items: flex-end; gap: 8px;
+  background: var(--gray-50); border: 1.5px solid var(--gray-200);
+  border-radius: 14px; padding: 8px 8px 8px 14px;
+  transition: border-color .2s;
+}
+.boso-input-wrap:focus-within { border-color: var(--gray-900); }
+
+#boso-input {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: 'Sarabun', sans-serif; font-size: 13.5px;
+  color: var(--gray-900); resize: none; max-height: 80px;
+  line-height: 1.5; padding: 1px 0;
+}
+#boso-input::placeholder { color: var(--gray-300); }
+
+#boso-send {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--gray-900); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background .15s, transform .15s;
+}
+#boso-send:hover { background: var(--gray-700); transform: scale(1.04); }
+#boso-send:disabled { opacity: .35; cursor: default; transform: none; }
+
+.boso-powered {
+  text-align: center; font-size: 10px;
+  color: var(--gray-300); margin-top: 8px;
+  font-family: 'Inter', sans-serif; letter-spacing: .04em;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 420px) {
+  #boso-window { width: calc(100vw - 20px); right: 10px; bottom: 88px; height: 65vh; }
+  #boso-toggle { right: 14px; bottom: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Toggle -->
+<button id="boso-toggle" onclick="bosoToggle()" title="คุยกับ BOSO">
+  <div class="unread-badge" id="boso-badge"></div>
+  <span id="boso-t-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  </span>
+</button>
+
+<!-- Window -->
+<div id="boso-window">
+
+  <!-- Header -->
+  <div class="boso-header">
+    <div class="boso-avatar-wrap">
+      <div class="boso-avatar">BO</div>
+      <div class="online-dot"></div>
+    </div>
+    <div class="boso-info">
+      <div class="boso-name">BOSO</div>
+      <div class="boso-sub">Soraso Hotel · AI Assistant</div>
+    </div>
+    <button class="boso-close" onclick="bosoToggle()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div id="boso-messages">
+    <div class="time-divider">Today</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="boso-footer">
+    <div class="boso-input-wrap">
+      <textarea id="boso-input" rows="1"
+        placeholder="Ask about rooms, rates, or services..."
+        onkeydown="bosoHandleKey(event)"
+        oninput="bosoResize(this)"></textarea>
+      <button id="boso-send" onclick="bosoSend()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="boso-powered">Powered by BOSO · Claude AI · Soraso</div>
+  </div>
+
+</div>
+
+<script>
+// ======================================
+// CONFIG — แก้ URL ให้ตรงกับ backend
+// ======================================
+const BOSO_API = 'https://boso-chatbot-production.up.railway.app/api/chat'
+
+// Quick replies (เพิ่ม/แก้ได้เลย)
+const BOSO_QR = [
+  '🛏 Room rates today',
+  '✨ Special promotions',
+  '🏊 Hotel facilities',
+  '🕐 Check-in & Check-out',
+  '✈️ Airport transfer',
+]
+
+let bosoOpen = false
+let bosoHistory = []
+let bosoLoading = false
+let bosoWelcomed = false
+
+const ICON_CHAT = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+const ICON_CLOSE_W = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#18181b" stroke-width="2.2" stroke-linecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>`
+const MINI_AVATAR = `<div class="boso-mini-avatar">BO</div>`
+
+function bosoToggle() {
+  bosoOpen = !bosoOpen
+  document.getElementById('boso-window').classList.toggle('open', bosoOpen)
+  document.getElementById('boso-toggle').classList.toggle('open', bosoOpen)
+  document.getElementById('boso-t-icon').innerHTML = bosoOpen ? ICON_CLOSE_W : ICON_CHAT
+  document.getElementById('boso-badge').classList.remove('show')
+
+  if (bosoOpen && !bosoWelcomed) {
+    bosoWelcomed = true
+    setTimeout(bosoWelcome, 280)
+  }
+}
+
+function bosoWelcome() {
+  bosoAddBot('Hi there! 👋 I\'m BOSO, your AI assistant at Soraso Hotel.\n\nI can help you with room rates, availability, hotel services, and promotions. What can I help you with today?', true)
+  setTimeout(bosoShowQR, 350)
+}
+
+function bosoAddBot(text, isFirst = false) {
+  const msgs = document.getElementById('boso-messages')
+  const row = document.createElement('div')
+  row.className = 'boso-bot-row'
+  const av = document.createElement('div')
+  av.innerHTML = MINI_AVATAR
+  const b = document.createElement('div')
+  b.className = 'boso-bubble-bot'
+  b.textContent = text
+  if (isFirst) b.style.borderLeft = '2px solid #e4e4e7'
+  row.appendChild(av.firstChild)
+  row.appendChild(b)
+  msgs.appendChild(row)
+  bosoScroll()
+}
+
+function bosoAddUser(text) {
+  const msgs = document.getElementById('boso-messages')
+  const wrap = document.createElement('div')
+  wrap.className = 'boso-user-row'
+  const b = document.createElement('div')
+  b.className = 'boso-bubble-user'
+  b.textContent = text
+  wrap.appendChild(b)
+  msgs.appendChild(wrap)
+  bosoScroll()
+}
+
+function bosoShowQR() {
+  const msgs = document.getElementById('boso-messages')
+  const div = document.createElement('div')
+  div.className = 'boso-qr'; div.id = 'boso-qr'
+  BOSO_QR.forEach(qr => {
+    const btn = document.createElement('button')
+    btn.className = 'boso-qr-btn'; btn.textContent = qr
+    btn.onclick = () => { document.getElementById('boso-qr')?.remove(); bosoSend(qr) }
+    div.appendChild(btn)
+  })
+  msgs.appendChild(div); bosoScroll()
+}
+
+function bosoShowTyping() {
+  const msgs = document.getElementById('boso-messages')
+  const row = document.createElement('div'); row.className = 'boso-typing-row'; row.id = 'boso-typing'
+  const av = document.createElement('div'); av.innerHTML = MINI_AVATAR
+  const b = document.createElement('div'); b.className = 'boso-typing-bubble'
+  b.innerHTML = '<div class="boso-dot"></div><div class="boso-dot"></div><div class="boso-dot"></div>'
+  row.appendChild(av.firstChild); row.appendChild(b)
+  msgs.appendChild(row); bosoScroll()
+}
+
+function bosoHideTyping() { document.getElementById('boso-typing')?.remove() }
+function bosoScroll() { const m = document.getElementById('boso-messages'); m.scrollTop = m.scrollHeight }
+
+async function bosoSend(text) {
+  const input = document.getElementById('boso-input')
+  const msg = text || input.value.trim()
+  if (!msg || bosoLoading) return
+
+  bosoLoading = true; input.value = ''; bosoResize(input)
+  document.getElementById('boso-send').disabled = true
+  document.getElementById('boso-qr')?.remove()
+
+  bosoAddUser(msg)
+  bosoHistory.push({ role: 'user', content: msg })
+  bosoShowTyping()
+
+  try {
+    const res = await fetch(BOSO_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        history: bosoHistory.slice(-8),
+        language: 'en'
+      })
+    })
+    const data = await res.json()
+    bosoHideTyping()
+    const reply = data.reply || 'Sorry, something went wrong. Please try again.'
+    bosoAddBot(reply)
+    bosoHistory.push({ role: 'assistant', content: reply })
+  } catch {
+    bosoHideTyping()
+    bosoAddBot('Unable to connect. Please check your connection and try again.')
+  }
+
+  bosoLoading = false
+  document.getElementById('boso-send').disabled = false
+  input.focus()
+}
+
+function bosoHandleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); bosoSend() }
+}
+
+function bosoResize(el) {
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 80) + 'px'
+}
+
+// Show badge หลังจาก 3 วินาที (ดึงความสนใจ)
+setTimeout(() => {
+  if (!bosoOpen) document.getElementById('boso-badge').classList.add('show')
+}, 3000)
+</script>
+
+</body>
+</html>
