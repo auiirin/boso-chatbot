@@ -50,25 +50,31 @@ async function fetchIBERate({ checkIn, checkOut, adults = 2, children = 0 }) {
 }
 
 function formatIBERate(data, checkIn, checkOut) {
-  if (!data) return null
+  if (!data || !data.RoomTypes) return null
 
   try {
-    // รองรับหลาย format ที่ IBE อาจส่งมา
-    const rooms = Array.isArray(data)
-      ? data
-      : data.RoomTypes || data.rooms || data.results || data.data || []
+    const rooms = data.RoomTypes
+    const currency = data.Currency || 'THB'
 
     if (!rooms.length) {
       return `ไม่พบห้องว่างสำหรับวันที่ ${checkIn} ถึง ${checkOut}`
     }
 
-    const lines = rooms.map(r => {
-      const name = r.RoomTypeName || r.RoomName || r.name || 'ห้องพัก'
-      const rate = r.Rate || r.TotalRate || r.ratePerNight || r.price || '-'
-      const currency = r.Currency || r.currency || 'THB'
-      const formatted = typeof rate === 'number' ? rate.toLocaleString() : rate
-      return `• ${name} — ${formatted} ${currency}/คืน`
-    }).join('\n')
+    const lines = rooms.map(room => {
+      const roomName = room.RoomTypeName || 'ห้องพัก'
+      const capacity = `${room.MaxAdult} ผู้ใหญ่${room.MaxChild > 0 ? `, ${room.MaxChild} เด็ก` : ''}`
+      const size = room.RoomSize ? `, ${room.RoomSize} ตร.ม.` : ''
+      
+      const ratePlanLines = (room.RatePlans || []).map(plan => {
+        const planName = plan.IBERateName || plan.RateName
+        const meal = plan.MealDescription || ''
+        const dailyRate = plan.DailyRate?.[0]?.SellRate || plan.RoomRate || '-'
+        const formatted = typeof dailyRate === 'number' ? dailyRate.toLocaleString() : dailyRate
+        return `  └─ ${planName}${meal ? ` (${meal})` : ''} — ${formatted} ${currency}/คืน`
+      }).join('\n')
+
+      return `• ${roomName} (${capacity}${size})\n${ratePlanLines}`
+    }).join('\n\n')
 
     return `=== ราคาห้องพัก Real-time จาก Soraso IBE ===\nเช็คอิน: ${checkIn} | เช็คเอาท์: ${checkOut}\n\n${lines}`
   } catch (err) {
