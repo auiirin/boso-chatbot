@@ -124,53 +124,6 @@ async function getHotelContext(msg) {
     const ibeText = formatIBERate(ibeData)
     if (ibeText) ctx.push(ibeText)
   }
-
-  // ดึงข้อมูลห้องพักจาก Supabase (รายละเอียดเพิ่มเติม)
-  if (m.match(/ห้อง|พัก|room|suite|deluxe|standard|superior|family/i)) {
-    const { data: rooms } = await supabase.from('rooms').select('*').eq('available', true).order('price_per_night')
-    if (rooms?.length) {
-      ctx.push(`=== รายละเอียดห้องพัก ===\n` + rooms.map(r =>
-        `• ${r.name} | ${r.price_per_night?.toLocaleString()} บาท/คืน | ${r.capacity} คน | ${r.size_sqm} ตร.ม.\n  ${r.description}\n  สิ่งอำนวยความสะดวก: ${r.amenities?.join(', ')}`
-      ).join('\n\n'))
-    }
-  }
-
-  // บริการ
-  if (m.match(/บริการ|สระ|สปา|ฟิตเนส|อาหาร|รถ|สนามบิน|service|pool|spa|gym|restaurant|transport/i)) {
-    const { data: services } = await supabase.from('services').select('*').eq('available', true)
-    if (services?.length) {
-      ctx.push(`=== บริการของโรงแรม ===\n` + services.map(s =>
-        `• ${s.name} | ${s.hours} | ${s.price ? `${s.price} บาท` : 'ฟรี'}\n  ${s.description}`
-      ).join('\n\n'))
-    }
-  }
-
-  // FAQ
-  if (m.match(/เช็คอิน|เช็คเอาท์|ยกเลิก|จอดรถ|wifi|บัตร|สัตว์|check|cancel|pet|park|นโยบาย|policy/i)) {
-    const { data: faqs } = await supabase.from('faqs').select('*')
-    if (faqs?.length) {
-      ctx.push(`=== FAQ & นโยบายโรงแรม ===\n` + faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n'))
-    }
-  }
-
-  // โปรโมชัน
-  if (m.match(/โปร|ส่วนลด|ลด|discount|promotion|offer|deal|special/i)) {
-    const today = new Date().toISOString().split('T')[0]
-    const { data: promos } = await supabase.from('promotions').select('*')
-      .eq('active', true).lte('valid_from', today).gte('valid_until', today)
-    if (promos?.length) {
-      ctx.push(`=== โปรโมชันที่มีอยู่ตอนนี้ ===\n` + promos.map(p =>
-        `• ${p.title}${p.discount_percent > 0 ? ` (ลด ${p.discount_percent}%)` : ''}\n  ${p.description}\n  เงื่อนไข: ${p.conditions}`
-      ).join('\n\n'))
-    }
-  }
-
-  // fallback — FAQ
-  if (!ctx.length) {
-    const { data: faqs } = await supabase.from('faqs').select('*')
-    if (faqs?.length) ctx.push(`=== FAQ & นโยบายโรงแรม ===\n` + faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n'))
-  }
-
   return ctx.join('\n\n')
 }
 
