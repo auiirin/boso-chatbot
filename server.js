@@ -17,7 +17,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANO
 // ======================================
 // Soraso IBE API — ดึงราคา real-time
 // ======================================
-async function fetchIBERate({ checkIn, checkOut, adults = 2, children = 0 }) {
+async function fetchIBERate() {
   try {
     const res = await fetch(`${process.env.SORASO_IBE_URL}/en/api/v1/Search/Availability`, {
       method: 'POST',
@@ -49,7 +49,7 @@ async function fetchIBERate({ checkIn, checkOut, adults = 2, children = 0 }) {
   }
 }
 
-function formatIBERate(data, checkIn, checkOut) {
+function formatIBERate(data) {
   if (!data || !data.RoomTypes) return null
 
   try {
@@ -76,7 +76,7 @@ function formatIBERate(data, checkIn, checkOut) {
       return `• ${roomName} (${capacity}${size})\n${ratePlanLines}`
     }).join('\n\n')
 
-    return `=== ราคาห้องพัก Real-time จาก Soraso IBE ===\nเช็คอิน: ${checkIn} | เช็คเอาท์: ${checkOut}\n\n${lines}`
+    return `=== ราคาห้องพัก Real-time จาก Soraso IBE ===\nเช็คอิน:  | เช็คเอาท์: \n${lines}`
   } catch (err) {
     console.error('IBE format error:', err.message)
     return null
@@ -120,9 +120,8 @@ async function getHotelContext(msg) {
 
   // ดึงราคา real-time จาก IBE
   if (m.match(/ราคา|ห้องว่าง|available|จอง|book|วันนี้|พรุ่งนี้|สุดสัปดาห์|weekend|rate|room/i)) {
-    const dates = extractDates(msg)
-    const ibeData = await fetchIBERate(dates)
-    const ibeText = formatIBERate(ibeData, dates.checkIn, dates.checkOut)
+    const ibeData = await fetchIBERate()
+    const ibeText = formatIBERate(ibeData)
     if (ibeText) ctx.push(ibeText)
   }
 
