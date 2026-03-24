@@ -27,10 +27,10 @@ async function fetchIBERate({ checkIn, checkOut, adults = 2, children = 0 }) {
       },
       body: JSON.stringify({
         Room: 1,
-        Arrival: checkIn,
-        Departure: checkOut,
-        Adult: adults,
-        Child: children,
+        Arrival: '2026-03-24',
+        Departure: '2026-03-25',
+        Adult: 1,
+        Child: 0,
         Infant: 0
       }),
       signal: AbortSignal.timeout(8000) // timeout 8 วินาที
